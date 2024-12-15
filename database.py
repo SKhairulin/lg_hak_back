@@ -1,12 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+#load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = 'postgresql+psycopg2://postgres:postgres@db:5432/postgres'
+#DATABASE_URL = 'postgresql+psycopg2://postgres:postgres@localhost:5432/postgres'
 
 engine = create_engine(DATABASE_URL)
 
