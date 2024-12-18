@@ -1,18 +1,48 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date
+from enum import Enum
 
-class ItemBase(BaseModel):
-    name: str
-    description: Optional[str] = None
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-class ItemCreate(ItemBase):
-    pass
+class TokenData(BaseModel):
+    username: Optional[str] = None
 
-class ItemUpdate(ItemBase):
-    pass
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    TRAINER = "trainer"
+    CLIENT = "client"
 
-class Item(ItemBase):
+class UserBase(BaseModel):
+    username: str
+    email: str
+
+class UserCreate(UserBase):
+    password: str
+    role: UserRole = UserRole.CLIENT
+
+class User(UserBase):
     id: int
+    role: UserRole
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class GymMembershipBase(BaseModel):
+    membership_type: str
+    start_date: date
+    end_date: date
+    visits_left: int
+    status: str
+
+class GymMembershipCreate(GymMembershipBase):
+    user_id: int
+
+class GymMembership(GymMembershipBase):
+    id: int
+    user_id: int
+
+    class Config:
+        from_attributes = True
