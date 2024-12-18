@@ -449,3 +449,67 @@ Authorization: Bearer <token>
     }
 ]
 
+
+## Отзывы и оценки тренеров
+
+### Создание отзыва
+**POST** `/api/reviews/`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "trainer_id": "integer",
+    "rating": "integer (1-5)",
+    "comment": "string"
+}
+```
+
+### Получение отзывов тренера
+**GET** `/api/reviews/trainer/{trainer_id}`
+
+**Query Parameters:**
+- `approved_only`: boolean (по умолчанию true)
+
+**Response:** `200 OK`
+```json
+[
+    {
+        "id": "integer",
+        "trainer_id": "integer",
+        "user_id": "integer",
+        "rating": "integer",
+        "comment": "string",
+        "created_at": "datetime",
+        "is_approved": "boolean"
+    }
+]
+```
+
+### Получение статистики отзывов тренера
+**GET** `/api/reviews/trainer/{trainer_id}/stats`
+
+**Response:** `200 OK`
+```json
+{
+    "average_rating": "float",
+    "total_reviews": "integer",
+    "rating_distribution": {
+        "1": "integer",
+        "2": "integer",
+        "3": "integer",
+        "4": "integer",
+        "5": "integer"
+    }
+}
+```
+
+### Одобрение отзыва (только для админов и тренеров)
+**PUT** `/api/reviews/{review_id}/approve`
+
+### Удаление отзыва (только для админов и тренеров)
+**DELETE** `/api/reviews/{review_id}`

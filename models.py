@@ -74,6 +74,20 @@ class GymVisit(Base):
     user = relationship("User", back_populates="visits")
     membership = relationship("GymMembership", back_populates="visits")
 
+class TrainerReview(Base):
+    __tablename__ = "trainer_reviews"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    trainer_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    rating = Column(Integer)  # Оценка от 1 до 5
+    comment = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    is_approved = Column(Boolean, default=False)  # Модерация отзывов
+    
+    trainer = relationship("User", foreign_keys=[trainer_id], backref="received_reviews")
+    user = relationship("User", foreign_keys=[user_id], backref="written_reviews")
+
 # Создание таблиц
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
