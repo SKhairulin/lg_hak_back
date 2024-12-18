@@ -1,13 +1,5 @@
 # API Documentation
 
-## Содержание
-- [Аутентификация](#аутентификация)
-- [Пользователи](#пользователи)
-- [Абонементы](#абонементы)
-- [Коды ошибок](#коды-ошибок)
-- [Роли и права доступа](#роли-и-права-доступа)
-- [Примечания](#примечания)
-
 ## Аутентификация
 
 ### Регистрация пользователя
@@ -250,4 +242,210 @@ Authorization: Bearer <access_token>
 3. При регистрации пользователь по умолчанию получает роль "client"
 
 4. Дата должна быть в формате "YYYY-MM-DD"
+
+### Создание расписания тренера
+**POST** `/api/schedule/`
+
+**Body:**
+```json
+{
+    "trainer_id": "integer",
+    "date": "YYYY-MM-DD",
+    "start_time": "HH:MM:SS",
+    "end_time": "HH:MM:SS",
+    "is_available": "boolean"
+}
 ```
+
+### Получение расписания тренера за период
+**GET** `/api/schedule/trainer/{trainer_id}/period`
+
+**Query Parameters:**
+- `start_date`: YYYY-MM-DD
+- `end_date`: YYYY-MM-DD
+
+**Response:** `200 OK`
+```json
+{
+    "trainer": {
+        "id": "integer",
+        "username": "string",
+        "email": "string",
+        "role": "trainer"
+    },
+    "schedules": [
+        {
+            "id": "integer",
+            "date": "YYYY-MM-DD",
+            "start_time": "HH:MM:SS",
+            "end_time": "HH:MM:SS",
+            "is_available": "boolean",
+            "trainer_id": "integer"
+        }
+    ]
+}
+```
+
+## Информация о тренерах
+
+### Создание информации о тренере
+**POST** `/api/trainers/info`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "trainer_id": "integer",
+    "specialization": "string",
+    "experience_years": "integer",
+    "education": "string",
+    "achievements": "string",
+    "description": "string",
+    "photo_url": "string (optional)"
+}
+```
+
+### Получение информации о тренере
+**GET** `/api/trainers/info/{trainer_id}`
+
+**Response:** `200 OK`
+```json
+{
+    "id": "integer",
+    "username": "string",
+    "email": "string",
+    "role": "trainer",
+    "trainer_info": {
+        "id": "integer",
+        "specialization": "string",
+        "experience_years": "integer",
+        "education": "string",
+        "achievements": "string",
+        "description": "string",
+        "photo_url": "string",
+        "trainer_id": "integer"
+    },
+    "schedules": [...]
+}
+```
+
+### Получение информации о всех тренерах
+**GET** `/api/trainers/all`
+
+### Обновление информации о тренере
+**PUT** `/api/trainers/info/{trainer_id}`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "specialization": "string",
+    "experience_years": "integer",
+    "education": "string",
+    "achievements": "string",
+    "description": "string",
+    "photo_url": "string (optional)"
+}
+```
+
+### Загрузка фото тренера
+**POST** `/api/trainers/info/{trainer_id}/photo`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+- Form-data with file field
+
+**Response:** `200 OK`
+```json
+{
+    "photo_url": "string"
+}
+```
+
+
+## Учет посещений и загруженность зала
+
+### Регистрация входа в зал
+**POST** `/api/visits/check-in`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "user_id": "integer",
+    "membership_id": "integer"
+}
+```
+
+### Регистрация выхода из зала
+**POST** `/api/visits/check-out/{visit_id}`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+### Текущая загруженность зала
+**GET** `/api/visits/current`
+
+**Response:** `200 OK`
+```json
+{
+    "current_visitors": "integer",
+    "max_capacity": "integer",
+    "timestamp": "datetime"
+}
+```
+
+### Статистика посещений за день
+**GET** `/api/visits/stats/daily`
+
+**Query Parameters:**
+- `target_date`: YYYY-MM-DD (опционально, по умолчанию - текущий день)
+
+**Response:** `200 OK`
+```json
+[
+    {
+        "current_visitors": "integer",
+        "max_capacity": "integer",
+        "timestamp": "datetime"
+    }
+]
+```
+
+### История посещений пользователя
+**GET** `/api/visits/user/{user_id}`
+
+**Query Parameters:**
+- `start_date`: YYYY-MM-DD (опционально)
+- `end_date`: YYYY-MM-DD (опционально)
+
+**Response:** `200 OK`
+```json
+[
+    {
+        "id": "integer",
+        "user_id": "integer",
+        "membership_id": "integer",
+        "check_in": "datetime",
+        "check_out": "datetime"
+    }
+]
+
