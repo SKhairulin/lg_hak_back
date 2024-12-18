@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Time, Boolean, func, DateTime
 from sqlalchemy.orm import relationship
 from database import Base, engine
 from enum import Enum as PyEnum
@@ -18,6 +18,9 @@ class User(Base):
     role = Column(String, default=UserRole.CLIENT)
     
     membership = relationship("GymMembership", back_populates="user")
+    schedules = relationship("TrainerSchedule", back_populates="trainer")
+    trainer_info = relationship("TrainerInfo", back_populates="trainer", uselist=False)
+    visits = relationship("GymVisit", back_populates="user")
 
 class GymMembership(Base):
     __tablename__ = "gym_memberships"
@@ -31,7 +34,60 @@ class GymMembership(Base):
     status = Column(String)
     
     user = relationship("User", back_populates="membership")
+    visits = relationship("GymVisit", back_populates="membership")
+
+class TrainerSchedule(Base):
+    __tablename__ = "trainer_schedules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    trainer_id = Column(Integer, ForeignKey("users.id"))
+    date = Column(Date, index=True)
+    start_time = Column(Time)
+    end_time = Column(Time)
+    is_available = Column(Boolean, default=True)
+    
+    trainer = relationship("User", back_populates="schedules")
+
+class TrainerInfo(Base):
+    __tablename__ = "trainer_info"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    trainer_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    specialization = Column(String)
+    experience_years = Column(Integer)
+    education = Column(String)
+    achievements = Column(String)
+    description = Column(String)
+    photo_url = Column(String, nullable=True)
+    
+    trainer = relationship("User", back_populates="trainer_info")
+
+class GymVisit(Base):
+    __tablename__ = "gym_visits"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    check_in = Column(DateTime, default=func.now())  # Время входа
+    check_out = Column(DateTime, nullable=True)      # Время выхода
+    membership_id = Column(Integer, ForeignKey("gym_memberships.id"))
+    
+    user = relationship("User", back_populates="visits")
+    membership = relationship("GymMembership", back_populates="visits")
+
+class TrainerReview(Base):
+    __tablename__ = "trainer_reviews"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    trainer_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    rating = Column(Integer)  # Оценка от 1 до 5
+    comment = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    is_approved = Column(Boolean, default=False)  # Модерация отзывов
+    
+    trainer = relationship("User", foreign_keys=[trainer_id], backref="received_reviews")
+    user = relationship("User", foreign_keys=[user_id], backref="written_reviews")
 
 # Создание таблиц
-# Base.metadata.drop_all(bind=engine)
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
