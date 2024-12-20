@@ -3,6 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi import HTTPException
 
 load_dotenv()
 
@@ -21,3 +23,12 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def handle_db_operation(operation):
+    try:
+        return operation()
+    except SQLAlchemyError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка базы данных: {str(e)}"
+        )
