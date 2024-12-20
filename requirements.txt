@@ -1,9 +1,13 @@
 fastapi
+pydantic
 uvicorn
 sqlalchemy
-psycopg2-binary
-python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+psycopg2-binary
+email-validator
+redis
+aioredis
+python-dotenv
 
