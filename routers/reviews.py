@@ -9,16 +9,16 @@ from schemas import (
     TrainerReview as TrainerReviewSchema,
     TrainerReviewStats
 )
-from dependencies import trainer_or_admin, all_roles
+from dependencies import trainer_or_admin, all_roles, get_current_user, manager_or_admin
 from datetime import datetime
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
-@router.post("/", response_model=TrainerReviewSchema, dependencies=[Depends(all_roles)])
+@router.post("/", response_model=TrainerReviewSchema, dependencies=[Depends(get_current_user)])
 def create_review(
     review: TrainerReviewCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(all_roles)
+    current_user: User = Depends(get_current_user)
 ):
     # Проверяем, что оценка в допустимом диапазоне
     if not 1 <= review.rating <= 5:
@@ -91,7 +91,7 @@ def get_trainer_review_stats(trainer_id: int, db: Session = Depends(get_db)):
         rating_distribution=distribution
     )
 
-@router.put("/{review_id}/approve", dependencies=[Depends(trainer_or_admin)])
+@router.put("/{review_id}/approve", dependencies=[Depends(manager_or_admin)])
 def approve_review(review_id: int, db: Session = Depends(get_db)):
     review = db.query(TrainerReview).filter(TrainerReview.id == review_id).first()
     if not review:
@@ -101,7 +101,7 @@ def approve_review(review_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Отзыв одобрен"}
 
-@router.delete("/{review_id}", dependencies=[Depends(trainer_or_admin)])
+@router.delete("/{review_id}", dependencies=[Depends(manager_or_admin)])
 def delete_review(review_id: int, db: Session = Depends(get_db)):
     review = db.query(TrainerReview).filter(TrainerReview.id == review_id).first()
     if not review:

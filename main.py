@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import engine, get_db
-from routers import membership, auth, users, schedule, trainer, occupancy, reviews
+from routers import membership, auth, users, schedule, trainer, occupancy, reviews, news, payments
 from fastapi.staticfiles import StaticFiles
 
 models.Base.metadata.create_all(bind=engine)
@@ -21,4 +21,6 @@ app.include_router(schedule.router)
 app.include_router(trainer.router)
 app.include_router(occupancy.router)
 app.include_router(reviews.router)
+app.include_router(news.router)
+app.include_router(payments.router)
 
