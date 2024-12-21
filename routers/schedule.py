@@ -1,53 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime, date
 from database import get_db
 from models import User, TrainerSchedule, UserRole, TrainingType, TrainingParticipant, GymMembership
-from schemas import TrainerScheduleCreate, TrainerSchedule as TrainerScheduleSchema, TrainerScheduleBase, TrainingParticipant as ParticipantSchema
+from schemas import TrainerScheduleCreate, TrainerSchedule as TrainerScheduleSchema, TrainerScheduleBase, TrainingParticipant as ParticipantSchema, ScheduleCreate, Schedule
 from dependencies import trainer_or_admin, get_current_user
 from datetime import date, time, datetime, timedelta
 
 router = APIRouter(prefix="/api/schedule", tags=["schedule"])
 
-@router.post("/", response_model=TrainerSchedule, dependencies=[Depends(trainer_or_admin)])
-def create_schedule(
-    schedule: TrainerScheduleCreate,
+@router.post("/", response_model=None)
+async def create_schedule(
+    schedule: ScheduleCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(trainer_or_admin)
+    _: dict = Depends(trainer_or_admin)
 ):
-    # Проверяем, что пользователь является тренером или админом
-    if current_user.role not in [UserRole.TRAINER, UserRole.ADMIN]:
-        raise HTTPException(status_code=403, detail="Только тренер может создавать расписание")
-    
-    # Проверяем корректность данных для групповой тренировки
-    if schedule.training_type == TrainingType.GROUP:
-        if not schedule.max_participants:
-            raise HTTPException(
-                status_code=400, 
-                detail="Для групповой тренировки необходимо указать максимальное количество участников"
-            )
-        if not schedule.name:
-            raise HTTPException(
-                status_code=400,
-                detail="Для групповой тренировки необходимо указать название"
-            )
-    
-    # Проверяем, нет ли пересечений в расписании
-    existing_schedule = db.query(TrainerSchedule).filter(
-        TrainerSchedule.trainer_id == schedule.trainer_id,
-        TrainerSchedule.date == schedule.date,
-        TrainerSchedule.start_time < schedule.end_time,
-        TrainerSchedule.end_time > schedule.start_time
-    ).first()
-    
-    if existing_schedule:
-        raise HTTPException(status_code=400, detail="В это время уже есть запись в расписании")
-    
     db_schedule = TrainerSchedule(**schedule.dict())
     db.add(db_schedule)
     db.commit()
     db.refresh(db_schedule)
     return db_schedule
+
+@router.get("/", response_model=None)
+async def get_schedules(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    trainer_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(TrainerSchedule)
+    
+    if start_date:
+        query = query.filter(TrainerSchedule.date >= start_date)
+    if end_date:
+        query = query.filter(TrainerSchedule.date <= end_date)
+    if trainer_id:
+        query = query.filter(TrainerSchedule.trainer_id == trainer_id)
+    
+    return query.all()
 
 @router.post("/{schedule_id}/join", response_model=ParticipantSchema)
 def join_training(
@@ -172,7 +163,7 @@ def cancel_training_participation(
     
     return {"message": "Запись на тренировку отменена"}
 
-# Добавим новый эндпоинт для получения расписания за период
+# Добавим новый ��ндпоинт для получения расписания за период
 @router.get("/trainer/{trainer_id}/period")
 def get_trainer_schedule_by_period(
     trainer_id: int,
@@ -206,3 +197,17 @@ def get_trainer_schedule_by_period(
 @router.post("/", dependencies=[Depends(trainer_or_admin)])
 @router.put("/{schedule_id}", dependencies=[Depends(trainer_or_admin)])
 @router.delete("/{schedule_id}", dependencies=[Depends(trainer_or_admin)]) 
+
+@router.delete("/{schedule_id}")
+async def delete_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    _: dict = Depends(trainer_or_admin)
+):
+    schedule = db.query(TrainerSchedule).filter(TrainerSchedule.id == schedule_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Расписание не найдено")
+    
+    db.delete(schedule)
+    db.commit()
+    return {"message": "Расписание удалено"} 

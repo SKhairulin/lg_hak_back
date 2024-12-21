@@ -1,40 +1,26 @@
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from models import Notification, TrainerSchedule, GymMembership, User
-from schemas import NotificationCreate
+import logging
 
-conf = ConnectionConfig(
-    MAIL_USERNAME="your_email@gmail.com",
-    MAIL_PASSWORD="your_password",
-    MAIL_FROM="your_email@gmail.com",
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_TLS=True,
-    MAIL_SSL=False,
-    USE_CREDENTIALS=True
-)
+logger = logging.getLogger(__name__)
 
-fastmail = FastMail(conf)
-
-async def create_notification(db: Session, notification: NotificationCreate):
-    db_notification = Notification(**notification.dict())
+async def create_notification(db: Session, notification_data: dict):
+    """Создание уведомления в базе данных"""
+    db_notification = Notification(**notification_data)
     db.add(db_notification)
     db.commit()
     db.refresh(db_notification)
     return db_notification
 
 async def send_email_notification(user_email: str, subject: str, body: str):
-    message = MessageSchema(
-        subject=subject,
-        recipients=[user_email],
-        body=body,
-        subtype="html"
-    )
-    await fastmail.send_message(message)
+    """Заглушка для отправки email"""
+    logger.info(f"[EMAIL STUB] To: {user_email}, Subject: {subject}, Body: {body}")
+    # В реальном приложении здесь будет отправка email
+    return True
 
 async def send_training_reminder():
-    """Отправка напоминаний о пре��стоящих тренировках"""
+    """Отправка напоминаний о предстоящих тренировках"""
     tomorrow = datetime.now().date() + timedelta(days=1)
     
     trainings = db.query(TrainerSchedule).filter(
@@ -44,17 +30,19 @@ async def send_training_reminder():
     for training in trainings:
         for participant in training.participants:
             if participant.status == "confirmed":
-                notification = NotificationCreate(
-                    user_id=participant.user_id,
-                    type="training_reminder",
-                    title="Напоминание о тренировке",
-                    message=f"Завтра в {training.start_time} у вас тренировка"
-                )
+                # Создаем уведомление в базе
+                notification = {
+                    "user_id": participant.user_id,
+                    "type": "training_reminder",
+                    "title": "Напоминание о тренировке",
+                    "message": f"Завтра в {training.start_time} у вас тренировка"
+                }
                 await create_notification(db, notification)
-                await send_email_notification(
-                    participant.user.email,
-                    "Напоминание о тренировке",
-                    f"Здравствуйте! Напоминаем, что завтра в {training.start_time} у вас запланирована тренировка."
+                
+                # Логируем "отправку" email
+                logger.info(
+                    f"[TRAINING REMINDER] Would send email to {participant.user.email} "
+                    f"about training at {training.start_time}"
                 )
 
 async def check_expiring_memberships():
@@ -67,17 +55,19 @@ async def check_expiring_memberships():
     ).all()
     
     for membership in expiring:
-        notification = NotificationCreate(
-            user_id=membership.user_id,
-            type="membership_expiring",
-            title="Абонемент скоро истекает",
-            message=f"Ваш абонемент истекает {membership.end_date}. Не забудьте продлить!"
-        )
+        # Создаем уведомление в базе
+        notification = {
+            "user_id": membership.user_id,
+            "type": "membership_expiring",
+            "title": "Абонемент скоро истекает",
+            "message": f"Ваш абонемент истекает {membership.end_date}. Не забудьте продлить!"
+        }
         await create_notification(db, notification)
-        await send_email_notification(
-            membership.user.email,
-            "Абонемент скоро истекает",
-            f"Здравствуйте! Ваш абонемент истекает {membership.end_date}. Пожалуйста, продлите его, чтобы продолжить посещать тренировки."
+        
+        # Логируем "отправку" email
+        logger.info(
+            f"[MEMBERSHIP EXPIRING] Would send email to {membership.user.email} "
+            f"about membership expiring on {membership.end_date}"
         )
 
 async def notify_training_cancelled(training_id: int):
