@@ -10,4 +10,3 @@ email-validator
 redis
 aioredis
 python-dotenv
-
