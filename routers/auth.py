@@ -34,6 +34,10 @@ def register_user(user: UserRegister, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
     
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username уже занят")
+    
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
@@ -58,12 +62,13 @@ async def login_for_access_token(
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный email или пароль",
+            detail="Неверные учетные данные",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email},
+        expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"} 

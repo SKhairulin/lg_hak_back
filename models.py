@@ -17,12 +17,15 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String, default=UserRole.CLIENT)
+    phone = Column(String, nullable=True)
     
     membership = relationship("GymMembership", back_populates="user")
     schedules = relationship("TrainerSchedule", back_populates="trainer")
     trainer_info = relationship("TrainerInfo", back_populates="trainer", uselist=False)
     visits = relationship("GymVisit", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    news = relationship("News", back_populates="author")
+    payments = relationship("Payment", back_populates="user")
 
 class GymMembership(Base):
     __tablename__ = "gym_memberships"
