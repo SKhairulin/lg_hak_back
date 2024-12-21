@@ -513,3 +513,118 @@ Authorization: Bearer <token>
 
 ### Удаление отзыва (только для админов и тренеров)
 **DELETE** `/api/reviews/{review_id}`
+
+## Управление абонементами
+
+### Создание нового абонемента
+**POST** `/api/membership/create`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "user_id": "integer",
+    "membership_type_id": "integer",
+    "payment_id": "integer"
+}
+```
+
+### Продление абонемента
+**POST** `/api/membership/{membership_id}/extend`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "payment_id": "integer"
+}
+```
+
+### Заморозка абонемента
+**POST** `/api/membership/{membership_id}/freeze`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Body:**
+```json
+{
+    "days": "integer (max 30)",
+    "reason": "string"
+}
+```
+
+### Разморозка абонемента
+**POST** `/api/membership/{membership_id}/unfreeze`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+## Уведомления
+
+### Получение уведомлений пользователя
+**GET** `/api/notifications`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+[
+    {
+        "id": "integer",
+        "type": "string (training_reminder|membership_expiring|training_cancelled|payment_success)",
+        "title": "string",
+        "message": "string",
+        "created_at": "datetime",
+        "read": "boolean"
+    }
+]
+```
+
+### Отметка уведомления как прочитанного
+**POST** `/api/notifications/{notification_id}/read`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+## Статусы абонементов
+
+- `active` - Активный абонемент
+- `frozen` - Замороженный абонемент
+- `expired` - Истекший абонемент
+- `cancelled` - Отмененный абонемент
+
+## Типы уведомлений
+
+- `training_reminder` - Напоминание о тренировке
+- `membership_expiring` - Истекающий абонемент
+- `training_cancelled` - Отмена тренировки
+- `membership_created` - Создание нового абонемента
+- `membership_extended` - Продление абонемента
+- `membership_frozen` - Заморозка абонемента
+- `membership_unfrozen` - Разморозка абонемента
+- `payment_success` - Успешная оплата
+
+## Ограничения
+
+1. Максимальный срок заморозки абонемента - 30 дней
+2. Напоминания о тренировках отправляются за 24 часа
+3. Уведомления об истечении абонемента отправляются за 7 дней
+4. Отмена тренировки возможна не менее чем за 24 часа
