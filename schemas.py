@@ -17,13 +17,26 @@ class UserBase(BaseModel):
     email: EmailStr
     phone: Optional[str] = Field(None, pattern=r'^\+7\d{10}$')
 
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, regex=r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$')
+class UserRegister(UserBase):
+    password: str = Field(min_length=8)
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if not any(c.isalpha() for c in v):
+            raise ValueError('Пароль должен содержать хотя бы одну букву')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Пароль должен содержать хотя бы одну цифру')
+        if len(v) < 8:
+            raise ValueError('Пароль должен быть не менее 8 символов')
+        return v
+
+class UserCreate(UserRegister):
     role: str = Field(default="client", pattern='^(client|trainer|admin|manager)$')
 
 class User(UserBase):
     id: int
     role: str
+    is_active: bool = True
 
     class Config:
         from_attributes = True
@@ -209,7 +222,6 @@ class MembershipTypeBase(BaseModel):
     visits_limit: int = Field(gt=0, le=1000)
     has_pool: bool
     has_sauna: bool
-    is_active: bool = True
 
 class MembershipTypeCreate(MembershipTypeBase):
     pass
@@ -220,12 +232,20 @@ class MembershipType(MembershipTypeBase):
     class Config:
         from_attributes = True
 
+# Создаем алиас для обратной совместимости
+MembershipTypeSchema = MembershipType
+
+class MembershipTypeWithPrice(BaseModel):
+    membership_type: MembershipType
+    price: int
+
+    class Config:
+        from_attributes = True
+
 class PriceListBase(BaseModel):
-    name: str
-    description: str
-    price: int = Field(gt=0, description="Цена должна быть больше 0")
-    duration_days: int = Field(gt=0, description="Длительность должна быть больше 0")
-    visits_limit: int = Field(gt=0, description="Количество посещений должно быть больше 0")
+    membership_type_id: int = Field(gt=0)
+    price: int = Field(gt=0, le=1000000)
+    is_active: bool = True
 
 class PriceListCreate(PriceListBase):
     pass
@@ -237,22 +257,20 @@ class PriceList(PriceListBase):
     class Config:
         from_attributes = True
 
-class MembershipTypeWithPrice(MembershipType):
-    price_list: List[PriceList] = []
+class PaymentBase(BaseModel):
+    amount: int = Field(gt=0)
+    payment_method: str = Field(pattern='^(card|cash)$')
+    status: str = Field(default="pending", pattern='^(pending|completed|failed|refunded)$')
 
-class PaymentCreate(BaseModel):
-    price_id: int
-    payment_method: str
+class PaymentCreate(PaymentBase):
+    user_id: int
+    membership_type_id: int
 
-class Payment(BaseModel):
+class Payment(PaymentBase):
     id: int
     user_id: int
-    price_id: int
-    amount: int
-    status: str
-    payment_method: str
     created_at: datetime
-    completed_at: Optional[datetime] = None
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -269,6 +287,55 @@ class Notification(NotificationBase):
     id: int
     created_at: datetime
     read: bool
+
+    class Config:
+        from_attributes = True
+
+class MembershipCreate(BaseModel):
+    user_id: int = Field(gt=0)
+    membership_type_id: int = Field(gt=0)
+    payment_id: int = Field(gt=0)
+
+class GymMembership(BaseModel):
+    id: int
+    user_id: int
+    membership_type: str
+    start_date: date
+    end_date: date
+    visits_left: int
+    status: str
+    has_pool: bool
+    has_sauna: bool
+    freeze_start: Optional[date] = None
+    freeze_end: Optional[date] = None
+    freeze_reason: Optional[str] = None
+    payment_id: int
+
+    @validator('status')
+    def validate_status(cls, v):
+        allowed_statuses = ['active', 'frozen', 'expired', 'cancelled']
+        if v not in allowed_statuses:
+            raise ValueError(f'Статус должен быть одним из: {", ".join(allowed_statuses)}')
+        return v
+
+    class Config:
+        from_attributes = True
+
+class ScheduleBase(BaseModel):
+    trainer_id: int
+    date: date
+    start_time: time
+    end_time: time
+    max_participants: int = Field(gt=0, le=50)
+    training_type: str
+    description: Optional[str] = None
+
+class ScheduleCreate(ScheduleBase):
+    pass
+
+class Schedule(ScheduleBase):
+    id: int
+    current_participants: int = 0
 
     class Config:
         from_attributes = True
